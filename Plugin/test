@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pen Plotter Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 28px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 1.9em;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            opacity: 0.92;
+        }
+
+        .main {
+            display: grid;
+            grid-template-columns: 370px 1fr;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            padding: 24px;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+            max-height: 860px;
+        }
+
+        .preview-area {
+            padding: 24px;
+        }
+
+        .section {
+            font-size: 1.05em;
+            font-weight: 700;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+            margin: 22px 0 14px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 9px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .checkbox-group input {
+            width: auto;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .btn:disabled {
+            background: #ccc !important;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .canvas-box {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+            min-height: 560px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 18px;
+            overflow: auto;
+        }
+
+        .gcode-box {
+            background: #111;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            border-radius: 8px;
+            padding: 16px;
+            max-height: 280px;
+            overflow: auto;
+            white-space: pre;
+        }
+
+        .alert {
+            padding: 12px 14px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 50px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 46px;
+            height: 46px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 1100px) {
+            .main {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🖊️ Pen Plotter Converter</h1>
+            <p>PDF / DOC / DOCX / TXT / текст → G-code для перьевого плоттера</p>
+        </header>
+
+        <div class="main">
+            <aside class="sidebar">
+                <div class="section">Источник</div>
+
+                <div class="form-group">
+                    <label for="fileInput">Файл</label>
+                    <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt">
+                    <div class="hint">Если выбран файл, текст ниже игнорируется.</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="textInput">Текст, если файл не выбран</label>
+                    <textarea id="textInput" rows="4">Привет, мир!</textarea>
+                </div>
+
+                <div class="section">Шрифт для текста</div>
+
+                <div class="form-group">
+                    <label for="fontName">Шрифт</label>
+                    <input type="text" id="fontName" value="DejaVu Sans">
+                    <div class="hint">По умолчанию используется встроенный DejaVu Sans.</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="fontWeight">Начертание</label>
+                    <select id="fontWeight">
+                        <option value="normal">Обычный</option>
+                        <option value="bold">Жирный</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="fontSize">Размер шрифта, px</label>
+                    <input type="number" id="fontSize" value="24" min="6" max="200" step="1">
+                </div>
+
+                <div class="section">Лист и масштаб</div>
+
+                <div class="form-group">
+                    <label for="pageFormat">Формат листа</label>
+                    <select id="pageFormat">
+                        <option value="unlimited">Без ограничений</option>
+                        <option value="a4_portrait">A4 портрет — 210×297 мм</option>
+                        <option value="a4_landscape">A4 альбом — 297×210 мм</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="marginMm">Поля, мм</label>
+                    <input type="number" id="marginMm" value="10" min="0" max="50" step="1">
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="autoFit" checked>
+                    <label for="autoFit" style="margin:0;">Автоматически вписать в лист</label>
+                </div>
+
+                <div class="form-group">
+                    <label for="widthMm">Ширина результата, мм</label>
+                    <input type="number" id="widthMm" value="200" min="20" max="1000" step="5">
+                    <div class="hint">В режиме автовписывания это поле игнорируется.</div>
+                </div>
+
+                <div class="section">Качество и движение</div>
+
+                <div class="form-group">
+                    <label for="qualityPx">Качество трассировки PDF, DPI</label>
+                    <input type="number" id="qualityPx" value="150" min="72" max="600" step="10">
+                    <div class="hint">Больше = точнее, но тяжелее файл и дольше обработка.</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="drawFeed">Подача рисования F, мм/мин</label>
+                    <input type="number" id="drawFeed" value="1200" min="50" max="10000" step="50">
+                </div>
+
+                <div class="form-group">
+                    <label for="travelFeed">Подача перемещения F, мм/мин</label>
+                    <input type="number" id="travelFeed" value="3000" min="50" max="20000" step="50">
+                </div>
+
+                <div class="section">Перо / GRBL</div>
+
+                <div class="form-group">
+                    <label for="penDownCmd">Перо вниз</label>
+                    <input type="text" id="penDownCmd" value="G1 Z0 F1000">
+                </div>
+
+                <div class="form-group">
+                    <label for="penUpCmd">Перо вверх</label>
+                    <input type="text" id="penUpCmd" value="G0 Z5">
+                </div>
+
+                <div class="form-group">
+                    <label for="penDwell">Пауза после команды пера, секунд</label>
+                    <input type="number" id="penDwell" value="0.15" min="0" max="3" step="0.05">
+                    <div class="hint">Для GRBL: G4 P0.2 = 0,2 с.</div>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="addGrblReset" checked>
+                    <label for="addGrblReset" style="margin:0;">Добавить $32=0 в начало файла</label>
+                </div>
+
+                <button class="btn btn-primary" id="convertBtn">Сгенерировать</button>
+                <button class="btn btn-success" id="downloadBtn" disabled>Сохранить .gcode</button>
+                <button class="btn btn-secondary" id="copyBtn" disabled>Копировать</button>
+            </aside>
+
+            <section class="preview-area">
+                <div id="alertBox"></div>
+
+                <div class="loading" id="loadingBox">
+                    <div class="spinner"></div>
+                    <div>Обработка документа...</div>
+                </div>
+
+                <div id="resultBox" style="display:none;">
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-label">Штрихов / контуров</div>
+                            <div class="stat-value" id="statPaths">—</div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-label">Строк G-code</div>
+                            <div class="stat-value" id="statLines">—</div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-label">Размер рисунка</div>
+                            <div class="stat-value" id="statDrawing">—</div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-label">Размер сетки</div>
+                            <div class="stat-value" id="statGrid">—</div>
+                        </div>
+                    </div>
+
+                    <div class="section">Предпросмотр</div>
+                    <div class="canvas-box">
+                        <canvas id="previewCanvas"></canvas>
+                    </div>
+
+                    <div class="section">G-code</div>
+                    <div class="gcode-box" id="gcodePreview"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById("fileInput");
+        const textInput = document.getElementById("textInput");
+        const convertBtn = document.getElementById("convertBtn");
+        const downloadBtn = document.getElementById("downloadBtn");
+        const copyBtn = document.getElementById("copyBtn");
+
+        const loadingBox = document.getElementById("loadingBox");
+        const resultBox = document.getElementById("resultBox");
+        const alertBox = document.getElementById("alertBox");
+
+        let currentGcodeText = "";
+        let currentFilename = "output.gcode";
+
+        function updateConvertButton() {
+            const hasFile = fileInput.files.length > 0;
+            const hasText = textInput.value.trim().length > 0;
+            convertBtn.disabled = !(hasFile || hasText);
+        }
+
+        fileInput.addEventListener("change", updateConvertButton);
+        textInput.addEventListener("input", updateConvertButton);
+        updateConvertButton();
+
+        function showAlert(message, type) {
+            alertBox.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+
+        function clearAlert() {
+            alertBox.innerHTML = "";
+        }
+
+        convertBtn.addEventListener("click", async () => {
+            clearAlert();
+
+            const formData = new FormData();
+
+            if (fileInput.files.length > 0) {
+                formData.append("file", fileInput.files[0]);
+                currentFilename = fileInput.files[0].name.replace(/\.[^/.]+$/, "") + ".gcode";
+            } else {
+                currentFilename = "text.gcode";
+            }
+
+            formData.append("text", textInput.value);
+            formData.append("fontName", document.getElementById("fontName").value);
+            formData.append("fontWeight", document.getElementById("fontWeight").value);
+            formData.append("fontSize", document.getElementById("fontSize").value);
+
+            formData.append("page_format", document.getElementById("pageFormat").value);
+            formData.append("margin_mm", document.getElementById("marginMm").value);
+            formData.append("auto_fit", document.getElementById("autoFit").checked);
+            formData.append("width_mm", document.getElementById("widthMm").value);
+
+            formData.append("quality_px", document.getElementById("qualityPx").value);
+            formData.append("draw_feed", document.getElementById("drawFeed").value);
+            formData.append("travel_feed", document.getElementById("travelFeed").value);
+
+            formData.append("pen_down_cmd", document.getElementById("penDownCmd").value);
+            formData.append("pen_up_cmd", document.getElementById("penUpCmd").value);
+            formData.append("pen_dwell", document.getElementById("penDwell").value);
+            formData.append("add_grbl_reset", document.getElementById("addGrblReset").checked);
+
+            loadingBox.classList.add("active");
+            resultBox.style.display = "none";
+            convertBtn.disabled = true;
+            downloadBtn.disabled = true;
+            copyBtn.disabled = true;
+
+            try {
+                const response = await fetch("/convert", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    showAlert(data.error, "error");
+                    return;
+                }
+
+                currentGcodeText = atob(data.gcode);
+
+                document.getElementById("statPaths").textContent = data.stats.paths;
+                document.getElementById("statLines").textContent = data.stats.gcode_lines;
+                document.getElementById("statDrawing").textContent =
+                    `${data.stats.drawing_width} × ${data.stats.drawing_height} мм`;
+                document.getElementById("statGrid").textContent =
+                    `${data.stats.grid_width} × ${data.stats.grid_height} мм`;
+
+                drawPreview(data.preview);
+
+                const previewLines = currentGcodeText.split("\n").slice(0, 120).join("\n");
+                document.getElementById("gcodePreview").textContent = previewLines;
+
+                resultBox.style.display = "block";
+                downloadBtn.disabled = false;
+                copyBtn.disabled = false;
+
+                showAlert("✅ G-code успешно сгенерирован.", "success");
+
+            } catch (error) {
+                showAlert("Ошибка: " + error, "error");
+            } finally {
+                loadingBox.classList.remove("active");
+                updateConvertButton();
+            }
+        });
+
+        downloadBtn.addEventListener("click", () => {
+            const blob = new Blob([currentGcodeText], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = currentFilename;
+            a.click();
+
+            URL.revokeObjectURL(url);
+        });
+
+        copyBtn.addEventListener("click", async () => {
+            try {
+                await navigator.clipboard.writeText(currentGcodeText);
+                showAlert("✅ G-code скопирован в буфер обмена.", "success");
+            } catch (e) {
+                showAlert("Не удалось скопировать автоматически.", "error");
+            }
+        });
+
+        function drawPreview(preview) {
+            const canvas = document.getElementById("previewCanvas");
+            const ctx = canvas.getContext("2d");
+
+            const gridW = Math.max(1, preview.grid_width);
+            const gridH = Math.max(1, preview.grid_height);
+
+            const padding = 35;
+            const maxCanvasW = 900;
+            const maxCanvasH = 620;
+
+            const scale = Math.min(
+                (maxCanvasW - padding * 2) / gridW,
+                (maxCanvasH - padding * 2) / gridH
+            );
+
+            canvas.width = gridW * scale + padding * 2;
+            canvas.height = gridH * scale + padding * 2;
+
+            ctx.fillStyle = "#fafafa";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grid / page
+            ctx.strokeStyle = "#d0d0d0";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(padding, padding, gridW * scale, gridH * scale);
+
+            // Margin
+            if (preview.margin > 0) {
+                ctx.strokeStyle = "#bbb";
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(
+                    padding + preview.margin * scale,
+                    padding + preview.margin * scale,
+                    Math.max(0, (gridW - preview.margin * 2) * scale),
+                    Math.max(0, (gridH - preview.margin * 2) * scale)
+                );
+                ctx.setLineDash([]);
+            }
+
+            // Drawing
+            ctx.strokeStyle = "#667eea";
+            ctx.lineWidth = 1.4;
+
+            for (const polyline of preview.polylines) {
+                if (polyline.length < 2) continue;
+
+                ctx.beginPath();
+
+                ctx.moveTo(
+                    padding + polyline[0][0] * scale,
+                    padding + polyline[0][1] * scale
+                );
+
+                for (let i = 1; i < polyline.length; i++) {
+                    ctx.lineTo(
+                        padding + polyline[i][0] * scale,
+                        padding + polyline[i][1] * scale
+                    );
+                }
+
+                ctx.stroke();
+            }
+
+            // Labels
+            ctx.fillStyle = "#555";
+            ctx.font = "12px sans-serif";
+            ctx.fillText(`${gridW} мм`, padding, padding - 10);
+
+            ctx.save();
+            ctx.translate(padding - 12, padding + gridH * scale / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText(`${gridH} мм`, 0, 0);
+            ctx.restore();
+        }
+    </script>
+</body>
+</html>
